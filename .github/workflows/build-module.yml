@@ -19,13 +19,20 @@ jobs:
             vermagic: "7099fd410828098dc6580ac1b9004dcd"
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out awg-openwrt repository
+        uses: actions/checkout@v4
+        with:
+          path: awg-openwrt
+
+      - name: Check out OpenWrt repository
+        uses: actions/checkout@v4
         with:
           repository: openwrt/openwrt
           ref: v${{ matrix.build_env.tag }}
+          path: openwrt
           fetch-depth: 0
 
-       - name: Copy .config to OpenWrt directory
+      - name: Copy .config to OpenWrt directory
         run: cp awg-openwrt/.config openwrt/.config
 
       - name: Cache Tools and Kernel
