@@ -25,9 +25,8 @@ jobs:
           ref: v${{ matrix.build_env.tag }}
           fetch-depth: 0
 
-      - name: Copy Custom Config
-        run: |
-          cp ./.config openwrt/.config
+       - name: Copy .config to OpenWrt directory
+        run: cp awg-openwrt/.config openwrt/.config
 
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
