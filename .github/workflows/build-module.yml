@@ -25,6 +25,10 @@ jobs:
           ref: v${{ matrix.build_env.tag }}
           fetch-depth: 0
 
+      - name: Copy custom config
+        run: |
+          cp awg-openwrt/.config openwrt/.config
+
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
         uses: actions/cache@v4
@@ -36,30 +40,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-build-vm4-cache-tools-kernel-${{ matrix.build_env.tag }}-${{ matrix.build_env.pkgarch}}-
 
-      - name: Copy custom .config
-        run: |
-          cp ./.config .config
-          echo "Using custom .config for build"
-
-      - name: Install feeds and dependencies
-        run: |
-          echo "src-git awgopenwrt https://github.com/yury-sannikov/awg-openwrt.git" >> ./feeds.conf
-          ./scripts/feeds update && ./scripts/feeds install -a
-
       - name: Building kernel and tools
         run: |
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
 
+          # Setup & install feeds
+          wget https://downloads.openwrt.org/releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
+          echo "src-git awgopenwrt https://github.com/yury-sannikov/awg-openwrt.git" >> ./feeds.conf
+          ./scripts/feeds update && ./scripts/feeds install -a
+
+          # Make defconfig
           make defconfig
 
           echo "    > make tools/install"
           make tools/install -i -j `nproc`
 
-          echo "    > make toolchain/install"
-          make toolchain/install  -i -j `nproc`
+          cat ./build_dir/target-*/linux-*/linux-*/.vermagic || true
 
+          echo "    > make toolchain/install"
+          make toolchain/install -i -j `nproc`
+
+          cat ./build_dir/target-*/linux-*/linux-*/.vermagic || true
+
+          # Compile kernel module
           echo "    > make target/linux/compile"
-          make target/linux/compile  -i -j `nproc` V=s
+          make target/linux/compile -i -j `nproc` V=s
 
           VERMAGIC=`cat ./build_dir/target-*/linux-*/linux-*/.vermagic`
           VERMAGIC_EXPECTED=${{ matrix.build_env.vermagic }}
@@ -93,7 +98,7 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          tag_name=${{  github.ref_name }}
+          tag_name=${{ github.ref_name }}
           mkdir -p awgrelease
           postfix="${tag_name}_v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools_*.ipk awgrelease/amneziawg-tools_${postfix}.ipk
