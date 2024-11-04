@@ -1,5 +1,5 @@
 name: Create Release on Tag
-# on: [workflow_dispatch]
+
 on:
   push:
     tags:
@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: openwrt/openwrt
-          path: openwrt  # Клонируем OpenWrt в папку `openwrt`
+          path: openwrt
           ref: v${{ matrix.build_env.tag }}
           fetch-depth: 0
 
@@ -30,6 +30,11 @@ jobs:
         run: |
           mkdir -p openwrt
           cd openwrt
+
+      - name: Install Build Dependencies
+        run: |
+          cd openwrt
+          make toolchain/install -j$(nproc) V=s
 
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
@@ -53,19 +58,17 @@ jobs:
           echo "CONFIG_PACKAGE_kmod-crypto-chacha20poly1305=m" >> .config
           make defconfig
 
-      - name: Building kernel and tools
+      - name: Building Kernel and Tools
         run: |
           cd openwrt
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
 
-          # Setup & install feeds
           wget https://downloads.openwrt.org/releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
           echo "src-git awgopenwrt https://github.com/yury-sannikov/awg-openwrt.git" >> ./feeds.conf
           ./scripts/feeds update && ./scripts/feeds install -a
 
-          # compile kernel module
           echo "    > make target/linux/compile"
-          make target/linux/compile  -i -j `nproc` V=s
+          make target/linux/compile -i -j `nproc` V=s
 
           VERMAGIC=`cat ./build_dir/target-*/linux-*/linux-*/.vermagic`
           VERMAGIC_EXPECTED=${{ matrix.build_env.vermagic }}
@@ -88,7 +91,6 @@ jobs:
             exit 1
           fi
 
-          # Ignore kmod build for some targets, replace with the awg-go
           make package/kmod-amneziawg/{clean,download,prepare} V=s || true
           make package/kmod-amneziawg/compile V=s || true
 
@@ -98,10 +100,10 @@ jobs:
           make V=s package/amneziawg-tools/{clean,download,prepare}
           make V=s package/amneziawg-tools/compile
 
-      - name: Prepare artifacts
+      - name: Prepare Artifacts
         run: |
           cd openwrt
-          tag_name=${{  github.ref_name }}
+          tag_name=${{ github.ref_name }}
           mkdir -p awgrelease
           postfix="${tag_name}_v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools_*.ipk awgrelease/amneziawg-tools_${postfix}.ipk
