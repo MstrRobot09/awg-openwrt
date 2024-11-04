@@ -32,8 +32,23 @@ jobs:
           path: openwrt
           fetch-depth: 0
 
-      - name: Copy .config to OpenWrt directory
-        run: cp awg-openwrt/.config openwrt/.config
+      - name: Update and install OpenWrt feeds
+        run: |
+          cd openwrt
+          cp ../awg-openwrt/.config .config
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Setup custom config
+        run: |
+          cd openwrt
+          echo "CONFIG_PACKAGE_kmod-amneziawg=m" >> .config
+          echo "CONFIG_PACKAGE_amneziawg-tools=y" >> .config
+          echo "CONFIG_PACKAGE_luci-app-amneziawg=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-crypto-lib-chacha20=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-crypto-lib-chacha20poly1305=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-crypto-chacha20poly1305=m" >> .config
+          make defconfig
 
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
