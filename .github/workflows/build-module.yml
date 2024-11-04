@@ -27,7 +27,7 @@ jobs:
 
       - name: Copy custom config
         run: |
-          cp awg-openwrt/.config openwrt/.config
+          cp .config openwrt/.config
 
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
