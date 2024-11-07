@@ -24,13 +24,13 @@ jobs:
       - name: Install Required Libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpam-dev liblzma-dev libsnmp-dev
+          sudo apt-get install -y libpam-dev liblzma-dev libsnmp-dev python3-pip
+          pip3 install gdown
 
       - name: Download SDK from Google Drive
         run: |
           FILE_ID=1oWi8xAudQGGc9_rSudryd0xpScEi-HFI
-          FILE_NAME=sdk.tar.gz
-          wget --no-check-certificate -q "https://drive.google.com/uc?export=download&id=${FILE_ID}" -O- | sed -n 's/.*confirm=\(.*\)&id=.*/\1/p' | wget --no-check-certificate "https://drive.google.com/uc?export=download&confirm=$(</dev/stdin)&id=${FILE_ID}" -O ${FILE_NAME}
+          gdown "https://drive.google.com/uc?id=${FILE_ID}" -O sdk.tar.gz
         
       - name: Extract SDK
         run: |
