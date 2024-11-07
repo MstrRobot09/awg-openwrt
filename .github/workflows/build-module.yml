@@ -1,4 +1,4 @@
-name: Create Release on Tag
+name: Create Release on Tag 
 
 on:
   push:
@@ -19,10 +19,11 @@ jobs:
             vermagic: "7099fd410828098dc6580ac1b9004dcd"
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           repository: openwrt/openwrt
-          path: openwrt  # Клонируем OpenWrt в папку `openwrt`
+          path: openwrt
           ref: v${{ matrix.build_env.tag }}
           fetch-depth: 0
 
@@ -31,10 +32,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libpam-dev liblzma-dev libsnmp-dev
 
-      - name: Create and Navigate to OpenWrt Directory
+      - name: Download and Extract SDK
         run: |
-          mkdir -p openwrt
-          cd openwrt
+          wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1oWi8xAudQGGc9_rSudryd0xpScEi-HFI' -O sdk.tar.gz
+          mkdir -p sdk
+          tar -xzf sdk.tar.gz -C sdk
+          
+      - name: Set SDK Environment Paths
+        run: |
+          echo "::add-path::$(pwd)/sdk/path/to/toolchain/bin"
+          echo "::add-path::$(pwd)/sdk/path/to/bin"
 
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
@@ -74,8 +81,6 @@ jobs:
           cd openwrt
           echo "pkgarch: ${{ matrix.build_env.pkgarch }}, target: ${{ matrix.build_env.target }}, subtarget: ${{ matrix.build_env.subtarget }}"
 
-          # compile kernel module
-          echo "    > make target/linux/compile"
           make target/linux/compile -i -j$(nproc) V=s
 
           VERMAGIC=`cat ./build_dir/target-*/linux-*/linux-*/.vermagic`
@@ -99,7 +104,6 @@ jobs:
             exit 1
           fi
 
-          # Ignore kmod build for some targets, replace with the awg-go
           make package/kmod-amneziawg/{clean,download,prepare} V=s || true
           make package/kmod-amneziawg/compile V=s || true
 
