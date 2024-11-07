@@ -20,30 +20,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          repository: openwrt/openwrt
-          path: openwrt  # Клонируем OpenWrt в папку `openwrt`
-          ref: v${{ matrix.build_env.tag }}
-          fetch-depth: 0
 
       - name: Install Required Libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y libpam-dev liblzma-dev libsnmp-dev
 
-      - name: Download SDK
+      - name: Download SDK from Google Drive
         run: |
-          file_id="1oWi8xAudQGGc9_rSudryd0xpScEi-HFI"
-          file_name="sdk.tar.gz"
-          curl -L -o ${file_name} "https://drive.google.com/uc?export=download&id=${file_id}" \
-          && curl -sc /tmp/gcookie "https://drive.google.com/uc?export=download&id=${file_id}" > /dev/null \
-          && code="$(awk '/_warning_/ {print $NF}' /tmp/gcookie)" \
-          && curl -Lb /tmp/gcookie "https://drive.google.com/uc?export=download&confirm=${code}&id=${file_id}" -o ${file_name}
-
+          FILE_ID=1oWi8xAudQGGc9_rSudryd0xpScEi-HFI
+          FILE_NAME=sdk.tar.gz
+          wget --no-check-certificate -q "https://drive.google.com/uc?export=download&id=${FILE_ID}" -O- | sed -n 's/.*confirm=\(.*\)&id=.*/\1/p' | wget --no-check-certificate "https://drive.google.com/uc?export=download&confirm=$(</dev/stdin)&id=${FILE_ID}" -O ${FILE_NAME}
+        
       - name: Extract SDK
         run: |
           mkdir sdk
-          tar -xzf sdk.tar.gz -C sdk
+          tar -xzf sdk.tar.gz -C sdk --strip-components=1
 
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
