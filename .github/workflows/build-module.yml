@@ -20,22 +20,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          repository: openwrt/openwrt
+          path: openwrt
+          ref: v${{ matrix.build_env.tag }}
+          fetch-depth: 0
 
       - name: Install Required Libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpam-dev liblzma-dev libsnmp-dev python3-pip
-          pip3 install gdown
+          sudo apt-get install -y libpam-dev liblzma-dev libsnmp-dev
 
-      - name: Download SDK from Google Drive
+      - name: Download SDK
         run: |
-          FILE_ID=1oWi8xAudQGGc9_rSudryd0xpScEi-HFI
-          gdown "https://drive.google.com/uc?id=${FILE_ID}" -O sdk.tar.gz
-        
+          wget -O sdk.tar.xz "https://www.dropbox.com/scl/fi/uwwh6ps0uhgxc7ueezfpw/sdk.tar.xz?rlkey=uvf6mjaldpcmhalzjdjzo19qf&dl=1"
+
       - name: Extract SDK
         run: |
-          mkdir sdk
-          tar -xzf sdk.tar.gz -C sdk --strip-components=1
+          mkdir -p sdk
+          tar -xJf sdk.tar.xz -C sdk --strip-components=1
 
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
