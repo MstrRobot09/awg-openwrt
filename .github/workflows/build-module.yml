@@ -31,14 +31,30 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libpam-dev liblzma-dev libsnmp-dev
 
-      - name: Download SDK
+      # Загрузка и распаковка SDK
+      - name: Download OpenWRT SDK
         run: |
-          wget -O sdk.tar.xz "https://www.dropbox.com/scl/fi/uwwh6ps0uhgxc7ueezfpw/sdk.tar.xz?rlkey=uvf6mjaldpcmhalzjdjzo19qf&dl=1"
+          wget -qO openwrt-sdk.tar.xz 'https://www.dropbox.com/scl/fi/uwwh6ps0uhgxc7ueezfpw/sdk.tar.xz?rlkey=uvf6mjaldpcmhalzjdjzo19qf&st=ept3ldyp&dl=0'
+          mkdir openwrt_sdk
+          tar -xvf openwrt-sdk.tar.xz -C openwrt_sdk
 
-      - name: Extract SDK
+      # Загрузка и распаковка Toolchain
+      - name: Download OpenWRT Toolchain
         run: |
-          mkdir -p sdk
-          tar -xJf sdk.tar.xz -C sdk --strip-components=1
+          wget -qO openwrt-toolchain.tar.xz 'https://www.dropbox.com/scl/fi/kblmt99x2spke4ohw913c/toolchain.tar.xz?rlkey=umhh1zculao639s6vldieecuk&st=1db2uey3&dl=0'
+          mkdir openwrt_toolchain
+          tar -xvf openwrt-toolchain.tar.xz -C openwrt_toolchain
+
+      # Установка переменных окружения для SDK и Toolchain
+      - name: Setup SDK and Toolchain environment
+        run: |
+          export SDK_PATH=$(pwd)/openwrt_sdk
+          export TOOLCHAIN_PATH=$(pwd)/openwrt_toolchain
+          export PATH=$TOOLCHAIN_PATH/bin:$PATH
+          echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
+          echo "TOOLCHAIN_PATH=$TOOLCHAIN_PATH" >> $GITHUB_ENV
+          echo "PATH=$TOOLCHAIN_PATH/bin:$PATH" >> $GITHUB_ENV
+
 
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
