@@ -1,4 +1,4 @@
-name: Create Release on Tag 
+name: Create Release on Tag
 
 on:
   push:
@@ -19,11 +19,10 @@ jobs:
             vermagic: "7099fd410828098dc6580ac1b9004dcd"
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: openwrt/openwrt
-          path: openwrt
+          path: openwrt  # Клонируем OpenWrt в папку `openwrt`
           ref: v${{ matrix.build_env.tag }}
           fetch-depth: 0
 
@@ -32,16 +31,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libpam-dev liblzma-dev libsnmp-dev
 
-      - name: Download and Extract SDK
+      - name: Download SDK
         run: |
-          wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1oWi8xAudQGGc9_rSudryd0xpScEi-HFI' -O sdk.tar.gz
-          mkdir -p sdk
+          file_id="1oWi8xAudQGGc9_rSudryd0xpScEi-HFI"
+          file_name="sdk.tar.gz"
+          curl -L -o ${file_name} "https://drive.google.com/uc?export=download&id=${file_id}" \
+          && curl -sc /tmp/gcookie "https://drive.google.com/uc?export=download&id=${file_id}" > /dev/null \
+          && code="$(awk '/_warning_/ {print $NF}' /tmp/gcookie)" \
+          && curl -Lb /tmp/gcookie "https://drive.google.com/uc?export=download&confirm=${code}&id=${file_id}" -o ${file_name}
+
+      - name: Extract SDK
+        run: |
+          mkdir sdk
           tar -xzf sdk.tar.gz -C sdk
-          
-      - name: Set SDK Environment Paths
-        run: |
-          echo "::add-path::$(pwd)/sdk/path/to/toolchain/bin"
-          echo "::add-path::$(pwd)/sdk/path/to/bin"
 
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
@@ -81,6 +83,8 @@ jobs:
           cd openwrt
           echo "pkgarch: ${{ matrix.build_env.pkgarch }}, target: ${{ matrix.build_env.target }}, subtarget: ${{ matrix.build_env.subtarget }}"
 
+          # compile kernel module
+          echo "    > make target/linux/compile"
           make target/linux/compile -i -j$(nproc) V=s
 
           VERMAGIC=`cat ./build_dir/target-*/linux-*/linux-*/.vermagic`
@@ -104,6 +108,7 @@ jobs:
             exit 1
           fi
 
+          # Ignore kmod build for some targets, replace with the awg-go
           make package/kmod-amneziawg/{clean,download,prepare} V=s || true
           make package/kmod-amneziawg/compile V=s || true
 
